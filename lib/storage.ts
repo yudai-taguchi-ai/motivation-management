@@ -7,13 +7,6 @@ export function readJSON<T>(key: string, fallback: T): T {
   }
 }
 
-export function writeJSON(key: string, value: unknown, isEmpty: boolean): void {
-  try {
-    if (isEmpty) localStorage.removeItem(key);
-    else localStorage.setItem(key, JSON.stringify(value));
-  } catch {}
-}
-
 export function keysWithPrefix(prefix: string): string[] {
   const keys: string[] = [];
   try {

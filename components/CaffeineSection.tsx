@@ -2,9 +2,10 @@
 
 import CaffeineForm from "@/components/CaffeineForm";
 import { minuteLabel } from "@/lib/day";
-import { knownCaffeineLabels, type Caffeine } from "@/lib/caffeine";
+import type { Caffeine } from "@/lib/caffeine";
 
 type Props = {
+  suggestions: string[];
   items: Caffeine[];
   editing: { item: Caffeine; isNew: boolean } | null;
   canAdd: boolean;
@@ -25,7 +26,7 @@ export default function CaffeineSection(props: Props) {
         key={item.id}
         initial={item}
         isNew={isNew}
-        suggestions={knownCaffeineLabels()}
+        suggestions={props.suggestions}
         onTimeChange={props.onTimeChange}
         onSave={props.onSave}
         onDelete={() => props.onDelete(item.id)}

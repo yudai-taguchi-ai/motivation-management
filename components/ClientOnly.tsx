@@ -2,8 +2,8 @@
 
 import dynamic from "next/dynamic";
 
-const DayView = dynamic(() => import("@/components/DayView"), { ssr: false });
+const AppRoot = dynamic(() => import("@/components/AppRoot"), { ssr: false });
 
 export default function ClientOnly() {
-  return <DayView />;
+  return <AppRoot />;
 }

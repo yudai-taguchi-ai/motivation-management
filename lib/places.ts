@@ -1,5 +1,6 @@
 import { SLOT_COUNT, minuteToSlot, slotToMinute } from "@/lib/day";
-import { keysWithPrefix, rankByCount, readJSON, writeJSON } from "@/lib/storage";
+import type { DayRecord } from "@/lib/records";
+import { rankByCount } from "@/lib/storage";
 
 export const FIXED_PLACES = ["家", "大学", "オフィス", "ジム"] as const;
 export type PlaceKind = "home" | "univ" | "office" | "gym" | "other";
@@ -18,19 +19,8 @@ export function placeKind(place: string): PlaceKind {
 export type PlaceSlots = (string | null)[];
 export type PlaceBlock = { place: string; start: number; end: number };
 
-const PREFIX = "places:";
-
 export function emptyPlaces(): PlaceSlots {
   return Array<string | null>(SLOT_COUNT).fill(null);
-}
-
-export function loadPlaces(date: string): PlaceSlots {
-  const saved = readJSON<PlaceSlots | null>(PREFIX + date, null);
-  return saved && saved.length === SLOT_COUNT ? saved : emptyPlaces();
-}
-
-export function savePlaces(date: string, slots: PlaceSlots): void {
-  writeJSON(PREFIX + date, slots, slots.every((p) => p === null));
 }
 
 export function paintPlaces(
@@ -60,11 +50,10 @@ export function placeBlocks(slots: PlaceSlots): PlaceBlock[] {
   return blocks;
 }
 
-export function knownOtherPlaces(): string[] {
-  const all = keysWithPrefix(PREFIX).flatMap((key) =>
-    readJSON<PlaceSlots>(key, []).filter(
-      (p): p is string => p !== null && placeKind(p) === "other",
+export function knownOtherPlaces(records: DayRecord[]): string[] {
+  return rankByCount(
+    records.flatMap((r) =>
+      r.places.filter((p): p is string => p !== null && placeKind(p) === "other"),
     ),
   );
-  return rankByCount(all);
 }

@@ -2,9 +2,10 @@
 
 import PlaceForm from "@/components/PlaceForm";
 import { minuteLabel } from "@/lib/day";
-import { knownOtherPlaces, type PlaceBlock } from "@/lib/places";
+import type { PlaceBlock } from "@/lib/places";
 
 type Props = {
+  suggestions: string[];
   blocks: PlaceBlock[];
   editing: { block: PlaceBlock; isNew: boolean } | null;
   canAdd: boolean;
@@ -25,7 +26,7 @@ export default function PlacesSection(props: Props) {
         key={`${block.start}-${isNew}`}
         initial={block}
         isNew={isNew}
-        otherSuggestions={knownOtherPlaces()}
+        otherSuggestions={props.suggestions}
         onRangeChange={props.onRangeChange}
         onSave={props.onSave}
         onDelete={() => props.onDelete(block)}

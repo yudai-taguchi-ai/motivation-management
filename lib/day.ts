@@ -65,32 +65,6 @@ export function weekdayLabel(key: string): string {
   return "日月火水木金土"[new Date(y, m - 1, d).getDay()];
 }
 
-const storageKey = (date: string) => `mood:${date}`;
-
-export function loadPoints(date: string): Points {
-  try {
-    const raw = localStorage.getItem(storageKey(date));
-    if (!raw) return emptyPoints();
-    const saved = JSON.parse(raw) as { points: Points };
-    return saved.points.length === SLOT_COUNT ? saved.points : emptyPoints();
-  } catch {
-    return emptyPoints();
-  }
-}
-
-export function savePoints(date: string, points: Points): void {
-  try {
-    if (points.every((p) => p === null)) {
-      localStorage.removeItem(storageKey(date));
-      return;
-    }
-    localStorage.setItem(
-      storageKey(date),
-      JSON.stringify({ points, updatedAt: new Date().toISOString() }),
-    );
-  } catch {}
-}
-
 type Peak = { slot: number; value: number };
 
 export function summarize(points: Points) {

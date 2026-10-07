@@ -2,7 +2,7 @@
 
 import NoteForm from "@/components/NoteForm";
 import { minuteLabel, minuteToSlot, valueNear, type Points } from "@/lib/day";
-import { knownTags, type Note } from "@/lib/notes";
+import type { Note } from "@/lib/notes";
 
 function change(points: Points, note: Note) {
   const before = valueNear(points, minuteToSlot(note.start));
@@ -12,6 +12,7 @@ function change(points: Points, note: Note) {
 }
 
 type Props = {
+  suggestions: string[];
   notes: Note[];
   points: Points;
   editing: { note: Note; isNew: boolean } | null;
@@ -33,7 +34,7 @@ export default function NotesSection(props: Props) {
         key={note.id}
         initial={note}
         isNew={isNew}
-        suggestions={knownTags()}
+        suggestions={props.suggestions}
         onRangeChange={props.onRangeChange}
         onSave={props.onSave}
         onDelete={() => props.onDelete(note.id)}

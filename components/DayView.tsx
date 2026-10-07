@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { SaveStatus } from "@/components/AppRoot";
 import CaffeineSection from "@/components/CaffeineSection";
 import MoodChart, { type Preview } from "@/components/MoodChart";
 import NotesSection from "@/components/NotesSection";
@@ -9,33 +10,30 @@ import {
   DAY_END_MIN,
   DAY_START_MIN,
   emptyPoints,
-  loadPoints,
   minuteLabel,
-  savePoints,
   shiftKey,
   slotLabel,
   summarize,
   todayKey,
   weekdayLabel,
 } from "@/lib/day";
-import { loadCaffeine, saveCaffeine, upsertCaffeine, type Caffeine } from "@/lib/caffeine";
+import { knownCaffeineLabels, upsertCaffeine, type Caffeine } from "@/lib/caffeine";
 import {
   defaultRange,
-  loadNotes,
+  knownTags,
   newId,
   nowMinutes,
-  saveNotes,
   upsertNote,
   type Note,
 } from "@/lib/notes";
 import {
-  loadPlaces,
+  knownOtherPlaces,
   paintPlaces,
   placeBlocks,
-  savePlaces,
   type PlaceBlock,
   type PlaceSlots,
 } from "@/lib/places";
+import { recordOf, type DayRecord, type Days } from "@/lib/records";
 
 type Editor =
   | { type: "note"; note: Note; isNew: boolean }
@@ -59,24 +57,24 @@ function newCaffeineTime(isToday: boolean): number {
   return Math.min(DAY_END_MIN, Math.max(DAY_START_MIN, m));
 }
 
-export default function DayView() {
-  const [date, setDate] = useState(todayKey);
-  const [points, setPoints] = useState(() => loadPoints(todayKey()));
-  const [notes, setNotes] = useState(() => loadNotes(todayKey()));
-  const [places, setPlaces] = useState(() => loadPlaces(todayKey()));
-  const [caffeine, setCaffeine] = useState(() => loadCaffeine(todayKey()));
+type Props = {
+  days: Days;
+  status: SaveStatus;
+  onSave: (record: DayRecord) => void;
+};
+
+export default function DayView({ days, status, onSave }: Props) {
+  const [record, setRecord] = useState(() => recordOf(days, todayKey()));
   const [editor, setEditor] = useState<Editor | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
+  const { date, mood: points, notes, places, caffeine } = record;
   const isToday = date === todayKey();
   const { average, max, min } = summarize(points);
   const blocks = placeBlocks(places);
+  const allRecords = [...days.values()];
 
   function moveTo(next: string) {
-    setDate(next);
-    setPoints(loadPoints(next));
-    setNotes(loadNotes(next));
-    setPlaces(loadPlaces(next));
-    setCaffeine(loadCaffeine(next));
+    setRecord(recordOf(days, next));
     close();
   }
 
@@ -92,30 +90,20 @@ export default function DayView() {
     setPreview(null);
   }
 
+  function commit(next: DayRecord) {
+    setRecord(next);
+    onSave(next);
+    close();
+  }
+
   function clear() {
     if (!confirm(`${date} の曲線を消しますか？（メモ・場所・カフェインは残ります）`)) return;
-    const empty = emptyPoints();
-    setPoints(empty);
-    savePoints(date, empty);
+    commit({ ...record, mood: emptyPoints() });
   }
 
-  function commitNotes(next: Note[]) {
-    setNotes(next);
-    saveNotes(date, next);
-    close();
-  }
-
-  function commitPlaces(next: PlaceSlots) {
-    setPlaces(next);
-    savePlaces(date, next);
-    close();
-  }
-
-  function commitCaffeine(next: Caffeine[]) {
-    setCaffeine(next);
-    saveCaffeine(date, next);
-    close();
-  }
+  const commitNotes = (next: Note[]) => commit({ ...record, notes: next });
+  const commitPlaces = (next: PlaceSlots) => commit({ ...record, places: next });
+  const commitCaffeine = (next: Caffeine[]) => commit({ ...record, caffeine: next });
 
   const updateRange = (start: number, end: number) => setPreview({ kind: "range", start, end });
 
@@ -142,6 +130,13 @@ export default function DayView() {
           今日に戻る
         </button>
       )}
+      {status !== "idle" && (
+        <p className={status === "error" ? "save-status save-error" : "save-status"} role="status">
+          {status === "saving"
+            ? "保存中…"
+            : "保存できませんでした。通信を確認して、もう一度操作してください"}
+        </p>
+      )}
 
       <MoodChart
         points={points}
@@ -152,8 +147,8 @@ export default function DayView() {
           .filter((c) => !(editor?.type === "caffeine" && editor.item.id === c.id))
           .map((c) => c.at)}
         preview={preview}
-        onChange={setPoints}
-        onCommit={(p) => savePoints(date, p)}
+        onChange={(mood) => setRecord((r) => ({ ...r, mood }))}
+        onCommit={(mood) => onSave({ ...record, mood })}
       />
 
       <dl className="stats">
@@ -172,6 +167,7 @@ export default function DayView() {
       </dl>
 
       <NotesSection
+        suggestions={knownTags(allRecords)}
         notes={notes}
         points={points}
         editing={editor?.type === "note" ? editor : null}
@@ -193,6 +189,7 @@ export default function DayView() {
       />
 
       <PlacesSection
+        suggestions={knownOtherPlaces(allRecords)}
         blocks={blocks}
         editing={editor?.type === "place" ? editor : null}
         canAdd={editor === null}
@@ -219,6 +216,7 @@ export default function DayView() {
       />
 
       <CaffeineSection
+        suggestions={knownCaffeineLabels(allRecords)}
         items={caffeine}
         editing={editor?.type === "caffeine" ? editor : null}
         canAdd={editor === null}
