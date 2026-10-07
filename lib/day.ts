@@ -9,11 +9,36 @@ export function emptyPoints(): Points {
   return Array<number | null>(SLOT_COUNT).fill(null);
 }
 
-export function slotLabel(slot: number): string {
-  const minutes = START_HOUR * 60 + slot * SLOT_MINUTES;
+export const DAY_START_MIN = START_HOUR * 60;
+export const DAY_END_MIN = END_HOUR * 60;
+
+export function minuteLabel(minutes: number): string {
   const h = Math.floor(minutes / 60) % 24;
   const m = minutes % 60;
   return `${h}:${String(m).padStart(2, "0")}`;
+}
+
+export function slotToMinute(slot: number): number {
+  return DAY_START_MIN + slot * SLOT_MINUTES;
+}
+
+export function minuteToSlot(minutes: number): number {
+  const slot = Math.floor((minutes - DAY_START_MIN) / SLOT_MINUTES);
+  return Math.min(SLOT_COUNT - 1, Math.max(0, slot));
+}
+
+export function slotLabel(slot: number): string {
+  return minuteLabel(slotToMinute(slot));
+}
+
+export function valueNear(points: Points, slot: number): number | null {
+  for (let d = 0; d <= 2; d++) {
+    const before = points[slot - d];
+    if (before !== undefined && before !== null) return before;
+    const after = points[slot + d];
+    if (after !== undefined && after !== null) return after;
+  }
+  return null;
 }
 
 function toKey(d: Date): string {

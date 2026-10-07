@@ -182,3 +182,188 @@ button:disabled {
   padding: 10px 16px;
   font-size: 14px;
 }
+
+.band-fill {
+  fill: #f3f3f3;
+}
+
+.band-mark {
+  fill: #999;
+}
+
+.band-active .band-fill {
+  fill: #e6e6e6;
+}
+
+.band-active .band-mark {
+  fill: var(--fg);
+}
+
+.notes {
+  margin-top: 24px;
+  border-top: 1px solid var(--fg);
+  padding-top: 12px;
+}
+
+.notes-title {
+  margin: 0 0 8px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.notes-empty {
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.note-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.note-list li + li {
+  border-top: 1px solid var(--line);
+}
+
+.note-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  width: 100%;
+  padding: 12px 0;
+  border: none;
+  text-align: left;
+}
+
+.note-time,
+.note-change {
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+}
+
+.note-change {
+  color: var(--muted);
+}
+
+.note-change strong {
+  color: var(--fg);
+}
+
+.note-body {
+  flex-basis: 100%;
+}
+
+.note-tags {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.add-note {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px;
+  border-style: dashed;
+}
+
+.note-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 8px 0;
+  padding: 12px;
+  border: 1px solid var(--fg);
+}
+
+.note-form-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.note-form select,
+.note-form textarea,
+.tag-field {
+  font: inherit;
+  font-size: 16px;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+}
+
+.note-form select {
+  padding: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.note-form textarea {
+  padding: 8px;
+  resize: vertical;
+}
+
+.note-form-error {
+  margin: 0;
+  font-size: 13px;
+}
+
+.tag-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px;
+}
+
+.tag-field input {
+  flex: 1;
+  min-width: 120px;
+  padding: 4px;
+  font: inherit;
+  font-size: 16px;
+  border: none;
+  outline: none;
+}
+
+.tag-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  padding: 4px 10px;
+  font-size: 14px;
+  border-color: var(--line-strong);
+}
+
+.tag-on {
+  background: var(--fg);
+  color: var(--bg);
+  border-color: var(--fg);
+}
+
+.note-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.note-form-actions button {
+  padding: 8px 16px;
+}
+
+.note-form-actions .primary {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+.note-form-actions .primary:disabled {
+  background: var(--line);
+  color: var(--line-strong);
+}
+
+.note-form-actions .danger {
+  margin-left: auto;
+}

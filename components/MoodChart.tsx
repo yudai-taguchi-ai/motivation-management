@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useSyncExternalStore } from "react";
-import { SLOT_COUNT, slotLabel, type Points } from "@/lib/day";
+import { DAY_END_MIN, DAY_START_MIN, SLOT_COUNT, slotLabel, type Points } from "@/lib/day";
 
 const NARROW_QUERY = "(max-width: 600px)";
 const PAD = { left: 40, right: 16, top: 16, bottom: 32 };
@@ -18,6 +18,8 @@ function makeLayout(narrow: boolean) {
     plotH,
     xOf: (slot: number) => PAD.left + (slot / SLOT_COUNT) * plotW,
     yOf: (value: number) => PAD.top + (1 - value / 100) * plotH,
+    xOfMinute: (m: number) =>
+      PAD.left + ((m - DAY_START_MIN) / (DAY_END_MIN - DAY_START_MIN)) * plotW,
   };
 }
 
@@ -65,13 +67,17 @@ function smoothPath(points: Points, { xOf, yOf }: Layout): string {
     .join("");
 }
 
+type Range = { start: number; end: number };
+
 type Props = {
   points: Points;
+  ranges: Range[];
+  activeRange: Range | null;
   onChange: (points: Points) => void;
   onCommit: (points: Points) => void;
 };
 
-export default function MoodChart({ points, onChange, onCommit }: Props) {
+export default function MoodChart({ points, ranges, activeRange, onChange, onCommit }: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const lastRef = useRef<{ slot: number; value: number } | null>(null);
   const pointsRef = useRef(points);
@@ -83,7 +89,7 @@ export default function MoodChart({ points, onChange, onCommit }: Props) {
     () => false,
   );
   const layout = makeLayout(narrow);
-  const { W, H, plotW, plotH, xOf, yOf } = layout;
+  const { W, H, plotW, plotH, xOf, yOf, xOfMinute } = layout;
 
   function readPointer(e: React.PointerEvent) {
     const svg = svgRef.current!;
@@ -166,6 +172,17 @@ export default function MoodChart({ points, onChange, onCommit }: Props) {
         onPointerCancel={handleUp}
         onPointerLeave={() => !drawing && setCursor(null)}
       >
+        {[...ranges, ...(activeRange ? [activeRange] : [])].map((r, i) => {
+          const active = activeRange !== null && i === ranges.length;
+          const x = xOfMinute(r.start);
+          const w = xOfMinute(r.end) - x;
+          return (
+            <g key={i} className={active ? "band band-active" : "band"}>
+              <rect x={x} y={PAD.top} width={w} height={plotH} className="band-fill" />
+              <rect x={x} y={PAD.top + plotH - 6} width={w} height={6} className="band-mark" />
+            </g>
+          );
+        })}
         {[0, 25, 50, 75, 100].map((v) => (
           <g key={v}>
             <line
