@@ -480,25 +480,6 @@ button:disabled {
   color: var(--bg);
 }
 
-.footer {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 24px 16px 40px;
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.link-button {
-  border: none;
-  padding: 0;
-  text-decoration: underline;
-  color: var(--muted);
-  font-size: 13px;
-}
-
 .login {
   max-width: 360px;
   margin: 18vh auto 0;
@@ -524,8 +505,4 @@ button:disabled {
 
 .login .form-actions {
   display: block;
-}
-
-.login .link-button {
-  align-self: flex-start;
 }

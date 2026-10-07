@@ -5,17 +5,13 @@ import { supabase } from "@/lib/cloud";
 
 const MESSAGES: Record<string, string> = {
   "Invalid login credentials": "メールアドレスかパスワードが違います",
-  "User already registered": "このメールアドレスはすでに登録されています",
-  "Signups not allowed for this instance": "新規登録は締め切っています",
 };
 
 function toJapanese(message: string): string {
-  if (message.includes("Password should be at least")) return "パスワードは8文字以上にしてください";
   return MESSAGES[message] ?? `うまくいきませんでした（${message}）`;
 }
 
 export default function LoginView() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,10 +21,7 @@ export default function LoginView() {
     e.preventDefault();
     setBusy(true);
     setError(null);
-    const { error } =
-      mode === "signin"
-        ? await supabase.auth.signInWithPassword({ email, password })
-        : await supabase.auth.signUp({ email, password });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) setError(toJapanese(error.message));
   }
@@ -50,8 +43,8 @@ export default function LoginView() {
         <input
           className="text-input"
           type="password"
-          autoComplete={mode === "signin" ? "current-password" : "new-password"}
-          placeholder="パスワード（8文字以上）"
+          autoComplete="current-password"
+          placeholder="パスワード"
           aria-label="パスワード"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -61,19 +54,10 @@ export default function LoginView() {
         {error && <p className="form-error">{error}</p>}
         <div className="form-actions">
           <button type="submit" className="primary" disabled={busy}>
-            {mode === "signin" ? "ログイン" : "登録してはじめる"}
+            ログイン
           </button>
         </div>
       </form>
-      <button
-        className="link-button"
-        onClick={() => {
-          setMode(mode === "signin" ? "signup" : "signin");
-          setError(null);
-        }}
-      >
-        {mode === "signin" ? "はじめて使う（新規登録）" : "登録済みの人はこちら（ログイン）"}
-      </button>
     </main>
   );
 }

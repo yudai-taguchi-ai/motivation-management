@@ -21,10 +21,10 @@ export default function AppRoot() {
 
   if (session === undefined) return <p className="center-note">読み込み中…</p>;
   if (session === null) return <LoginView />;
-  return <SignedIn key={session.user.id} email={session.user.email ?? ""} />;
+  return <SignedIn key={session.user.id} />;
 }
 
-function SignedIn({ email }: { email: string }) {
+function SignedIn() {
   const [days, setDays] = useState<Days | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [status, setStatus] = useState<SaveStatus>("idle");
@@ -90,12 +90,6 @@ function SignedIn({ email }: { email: string }) {
         </div>
       )}
       <DayView key={version} days={days} status={status} onSave={save} />
-      <footer className="footer">
-        <span>{email}</span>
-        <button className="link-button" onClick={() => supabase.auth.signOut()}>
-          ログアウト
-        </button>
-      </footer>
     </>
   );
 }
