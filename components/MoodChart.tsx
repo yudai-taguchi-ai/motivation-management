@@ -2,13 +2,22 @@
 
 import { useRef, useState, useSyncExternalStore } from "react";
 import { DAY_END_MIN, DAY_START_MIN, SLOT_COUNT, slotLabel, type Points } from "@/lib/day";
+import { placeKind, type PlaceBlock, type PlaceKind, type PlaceSlots } from "@/lib/places";
 
 const NARROW_QUERY = "(max-width: 600px)";
-const PAD = { left: 40, right: 16, top: 16, bottom: 32 };
+const PAD = { left: 40, right: 16, top: 30, bottom: 32 };
+
+const PLACE_FILL: Record<PlaceKind, string> = {
+  home: "#f1f1f1",
+  univ: "url(#pl-univ)",
+  office: "#e2e2e2",
+  gym: "url(#pl-gym)",
+  other: "url(#pl-other)",
+};
 
 function makeLayout(narrow: boolean) {
   const W = narrow ? 400 : 800;
-  const H = narrow ? 420 : 320;
+  const H = narrow ? 440 : 340;
   const plotW = W - PAD.left - PAD.right;
   const plotH = H - PAD.top - PAD.bottom;
   return {
@@ -68,21 +77,34 @@ function smoothPath(points: Points, { xOf, yOf }: Layout): string {
 }
 
 type Range = { start: number; end: number };
+export type Preview = { kind: "range"; start: number; end: number } | { kind: "point"; at: number };
 
 type Props = {
   points: Points;
-  ranges: Range[];
-  activeRange: Range | null;
+  noteRanges: Range[];
+  places: PlaceBlock[];
+  placeSlots: PlaceSlots;
+  caffeine: number[];
+  preview: Preview | null;
   onChange: (points: Points) => void;
   onCommit: (points: Points) => void;
 };
 
-export default function MoodChart({ points, ranges, activeRange, onChange, onCommit }: Props) {
+export default function MoodChart({
+  points,
+  noteRanges,
+  places,
+  placeSlots,
+  caffeine,
+  preview,
+  onChange,
+  onCommit,
+}: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const lastRef = useRef<{ slot: number; value: number } | null>(null);
   const pointsRef = useRef(points);
   const [drawing, setDrawing] = useState(false);
-  const [cursor, setCursor] = useState<{ slot: number; value: number } | null>(null);
+  const [cursor, setCursor] = useState<{ slot: number; value: number | null } | null>(null);
   const narrow = useSyncExternalStore(
     subscribeNarrow,
     () => window.matchMedia(NARROW_QUERY).matches,
@@ -137,7 +159,7 @@ export default function MoodChart({ points, ranges, activeRange, onChange, onCom
       setCursor(p);
     } else {
       const saved = points[p.slot];
-      setCursor(saved === null ? null : { slot: p.slot, value: saved });
+      setCursor(saved === null && placeSlots[p.slot] === null ? null : { slot: p.slot, value: saved });
     }
   }
 
@@ -156,7 +178,10 @@ export default function MoodChart({ points, ranges, activeRange, onChange, onCom
         {cursor ? (
           <>
             <span className="readout-time">{slotLabel(cursor.slot)}</span>
-            <span className="readout-value">{cursor.value}</span>
+            {cursor.value !== null && <span className="readout-value">{cursor.value}</span>}
+            {placeSlots[cursor.slot] && (
+              <span className="readout-place">{placeSlots[cursor.slot]}</span>
+            )}
           </>
         ) : (
           <span className="readout-hint">なぞって調子を描く</span>
@@ -172,14 +197,31 @@ export default function MoodChart({ points, ranges, activeRange, onChange, onCom
         onPointerCancel={handleUp}
         onPointerLeave={() => !drawing && setCursor(null)}
       >
-        {[...ranges, ...(activeRange ? [activeRange] : [])].map((r, i) => {
-          const active = activeRange !== null && i === ranges.length;
-          const x = xOfMinute(r.start);
-          const w = xOfMinute(r.end) - x;
+        <defs>
+          <pattern id="pl-univ" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <rect width="8" height="8" fill="#fafafa" />
+            <rect width="3" height="8" fill="#e0e0e0" />
+          </pattern>
+          <pattern id="pl-gym" width="8" height="8" patternUnits="userSpaceOnUse">
+            <rect width="8" height="8" fill="#fafafa" />
+            <circle cx="4" cy="4" r="1.6" fill="#c4c4c4" />
+          </pattern>
+          <pattern id="pl-other" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+            <rect width="6" height="6" fill="#fafafa" />
+            <rect width="1" height="6" fill="#cfcfcf" />
+          </pattern>
+        </defs>
+        {places.map((b) => {
+          const x = xOfMinute(b.start);
+          const w = xOfMinute(b.end) - x;
           return (
-            <g key={i} className={active ? "band band-active" : "band"}>
-              <rect x={x} y={PAD.top} width={w} height={plotH} className="band-fill" />
-              <rect x={x} y={PAD.top + plotH - 6} width={w} height={6} className="band-mark" />
+            <g key={b.start} className="place">
+              <rect x={x} y={PAD.top} width={w} height={plotH} fill={PLACE_FILL[placeKind(b.place)]} />
+              {w >= b.place.length * 13 + 8 && (
+                <text x={x + 4} y={PAD.top + 14} className="place-label">
+                  {b.place}
+                </text>
+              )}
             </g>
           );
         })}
@@ -215,6 +257,41 @@ export default function MoodChart({ points, ranges, activeRange, onChange, onCom
             </text>
           </g>
         ))}
+        {noteRanges.map((r) => (
+          <rect
+            key={`${r.start}-${r.end}`}
+            x={xOfMinute(r.start)}
+            y={PAD.top + plotH - 6}
+            width={xOfMinute(r.end) - xOfMinute(r.start)}
+            height={6}
+            className="note-mark"
+          />
+        ))}
+        {caffeine.map((at, i) => (
+          <g key={`${at}-${i}`} className="caffeine">
+            <line x1={xOfMinute(at)} x2={xOfMinute(at)} y1={PAD.top - 4} y2={PAD.top + plotH} />
+            <circle cx={xOfMinute(at)} cy={PAD.top - 14} r={9} />
+            <text x={xOfMinute(at)} y={PAD.top - 14}>C</text>
+          </g>
+        ))}
+        {preview?.kind === "range" && (
+          <rect
+            x={xOfMinute(preview.start)}
+            y={PAD.top}
+            width={Math.max(0, xOfMinute(preview.end) - xOfMinute(preview.start))}
+            height={plotH}
+            className="preview-range"
+          />
+        )}
+        {preview?.kind === "point" && (
+          <line
+            x1={xOfMinute(preview.at)}
+            x2={xOfMinute(preview.at)}
+            y1={PAD.top - 4}
+            y2={PAD.top + plotH}
+            className="preview-point"
+          />
+        )}
         <path d={smoothPath(points, layout)} className="curve" />
         {cursor && (
           <>
@@ -225,10 +302,55 @@ export default function MoodChart({ points, ranges, activeRange, onChange, onCom
               y2={H - PAD.bottom}
               className="cursor-line"
             />
-            <circle cx={xOf(cursor.slot)} cy={yOf(cursor.value)} r={5} className="cursor-dot" />
+            {cursor.value !== null && (
+              <circle cx={xOf(cursor.slot)} cy={yOf(cursor.value)} r={5} className="cursor-dot" />
+            )}
           </>
         )}
       </svg>
+      <Legend places={places} hasCaffeine={caffeine.length > 0} hasNotes={noteRanges.length > 0} />
     </div>
+  );
+}
+
+function Legend({
+  places,
+  hasCaffeine,
+  hasNotes,
+}: {
+  places: PlaceBlock[];
+  hasCaffeine: boolean;
+  hasNotes: boolean;
+}) {
+  const names = [...new Set(places.map((b) => b.place))];
+  if (names.length === 0 && !hasCaffeine && !hasNotes) return null;
+  return (
+    <ul className="legend">
+      {names.map((name) => (
+        <li key={name}>
+          <svg width="16" height="16" aria-hidden>
+            <rect width="16" height="16" fill={PLACE_FILL[placeKind(name)]} stroke="#bbb" />
+          </svg>
+          {name}
+        </li>
+      ))}
+      {hasCaffeine && (
+        <li>
+          <svg width="16" height="16" aria-hidden className="caffeine">
+            <circle cx="8" cy="8" r="8" />
+            <text x="8" y="8">C</text>
+          </svg>
+          カフェイン
+        </li>
+      )}
+      {hasNotes && (
+        <li>
+          <svg width="16" height="16" aria-hidden>
+            <rect y="10" width="16" height="6" className="note-mark" />
+          </svg>
+          メモ
+        </li>
+      )}
+    </ul>
   );
 }

@@ -1,84 +1,123 @@
 "use client";
 
 import { useState } from "react";
-import MoodChart from "@/components/MoodChart";
-import NoteForm from "@/components/NoteForm";
+import CaffeineSection from "@/components/CaffeineSection";
+import MoodChart, { type Preview } from "@/components/MoodChart";
+import NotesSection from "@/components/NotesSection";
+import PlacesSection from "@/components/PlacesSection";
 import {
+  DAY_END_MIN,
+  DAY_START_MIN,
   emptyPoints,
   loadPoints,
   minuteLabel,
-  minuteToSlot,
   savePoints,
   shiftKey,
   slotLabel,
   summarize,
   todayKey,
-  valueNear,
   weekdayLabel,
-  type Points,
 } from "@/lib/day";
+import { loadCaffeine, saveCaffeine, upsertCaffeine, type Caffeine } from "@/lib/caffeine";
 import {
   defaultRange,
-  knownTags,
   loadNotes,
   newId,
+  nowMinutes,
   saveNotes,
   upsertNote,
   type Note,
 } from "@/lib/notes";
+import {
+  loadPlaces,
+  paintPlaces,
+  placeBlocks,
+  savePlaces,
+  type PlaceBlock,
+  type PlaceSlots,
+} from "@/lib/places";
 
-type Editing = { note: Note; isNew: boolean; start: number; end: number };
+type Editor =
+  | { type: "note"; note: Note; isNew: boolean }
+  | { type: "place"; block: PlaceBlock; isNew: boolean }
+  | { type: "caffeine"; item: Caffeine; isNew: boolean };
 
-function change(points: Points, note: Note) {
-  const before = valueNear(points, minuteToSlot(note.start));
-  const after = valueNear(points, minuteToSlot(note.end));
-  if (before === null || after === null) return null;
-  return { before, after, diff: after - before };
+function newPlaceRange(isToday: boolean, slots: PlaceSlots): { start: number; end: number } {
+  const blocks = placeBlocks(slots);
+  const lastEnd = blocks.length ? blocks[blocks.length - 1].end : null;
+  if (isToday) {
+    const { end } = defaultRange(true);
+    return { start: lastEnd !== null && lastEnd < end ? lastEnd : end - 60, end };
+  }
+  if (lastEnd !== null && lastEnd + 60 <= DAY_END_MIN) return { start: lastEnd, end: lastEnd + 60 };
+  return { start: 9 * 60, end: 12 * 60 };
+}
+
+function newCaffeineTime(isToday: boolean): number {
+  if (!isToday) return 9 * 60;
+  const m = Math.floor(nowMinutes() / 5) * 5;
+  return Math.min(DAY_END_MIN, Math.max(DAY_START_MIN, m));
 }
 
 export default function DayView() {
   const [date, setDate] = useState(todayKey);
   const [points, setPoints] = useState(() => loadPoints(todayKey()));
   const [notes, setNotes] = useState(() => loadNotes(todayKey()));
-  const [editing, setEditing] = useState<Editing | null>(null);
+  const [places, setPlaces] = useState(() => loadPlaces(todayKey()));
+  const [caffeine, setCaffeine] = useState(() => loadCaffeine(todayKey()));
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const [preview, setPreview] = useState<Preview | null>(null);
   const isToday = date === todayKey();
   const { average, max, min } = summarize(points);
+  const blocks = placeBlocks(places);
 
   function moveTo(next: string) {
     setDate(next);
     setPoints(loadPoints(next));
     setNotes(loadNotes(next));
-    setEditing(null);
+    setPlaces(loadPlaces(next));
+    setCaffeine(loadCaffeine(next));
+    close();
+  }
+
+  function open(next: Editor) {
+    setEditor(next);
+    if (next.type === "note") setPreview({ kind: "range", ...next.note });
+    if (next.type === "place") setPreview({ kind: "range", ...next.block });
+    if (next.type === "caffeine") setPreview({ kind: "point", at: next.item.at });
+  }
+
+  function close() {
+    setEditor(null);
+    setPreview(null);
   }
 
   function clear() {
-    if (!confirm(`${date} の曲線を消しますか？（メモは残ります）`)) return;
+    if (!confirm(`${date} の曲線を消しますか？（メモ・場所・カフェインは残ります）`)) return;
     const empty = emptyPoints();
     setPoints(empty);
     savePoints(date, empty);
   }
 
-  function startNew() {
-    const range = defaultRange(isToday);
-    setEditing({
-      note: { id: newId(), body: "", tags: [], ...range },
-      isNew: true,
-      ...range,
-    });
-  }
-
-  function persist(next: Note[]) {
+  function commitNotes(next: Note[]) {
     setNotes(next);
     saveNotes(date, next);
-    setEditing(null);
+    close();
   }
 
-  function remove(id: string) {
-    if (!confirm("このメモを削除しますか？")) return;
-    persist(notes.filter((n) => n.id !== id));
+  function commitPlaces(next: PlaceSlots) {
+    setPlaces(next);
+    savePlaces(date, next);
+    close();
   }
 
-  const visibleNotes = notes.filter((n) => n.id !== editing?.note.id);
+  function commitCaffeine(next: Caffeine[]) {
+    setCaffeine(next);
+    saveCaffeine(date, next);
+    close();
+  }
+
+  const updateRange = (start: number, end: number) => setPreview({ kind: "range", start, end });
 
   return (
     <main className="day">
@@ -106,8 +145,13 @@ export default function DayView() {
 
       <MoodChart
         points={points}
-        ranges={visibleNotes}
-        activeRange={editing ? { start: editing.start, end: editing.end } : null}
+        noteRanges={notes.filter((n) => !(editor?.type === "note" && editor.note.id === n.id))}
+        places={blocks}
+        placeSlots={places}
+        caffeine={caffeine
+          .filter((c) => !(editor?.type === "caffeine" && editor.item.id === c.id))
+          .map((c) => c.at)}
+        preview={preview}
         onChange={setPoints}
         onCommit={(p) => savePoints(date, p)}
       />
@@ -127,74 +171,74 @@ export default function DayView() {
         </div>
       </dl>
 
-      <section className="notes">
-        <h2 className="notes-title">メモ</h2>
-        {notes.length === 0 && !editing && (
-          <p className="notes-empty">この日のメモはまだありません</p>
-        )}
-        <ul className="note-list">
-          {notes.map((note) => {
-            if (editing?.note.id === note.id) {
-              return (
-                <li key={note.id}>
-                  <NoteForm
-                    initial={note}
-                    isNew={false}
-                    suggestions={knownTags()}
-                    onRangeChange={(start, end) => setEditing({ ...editing, start, end })}
-                    onSave={(n) => persist(upsertNote(notes, n))}
-                    onDelete={() => remove(note.id)}
-                    onCancel={() => setEditing(null)}
-                  />
-                </li>
-              );
-            }
-            const c = change(points, note);
-            return (
-              <li key={note.id}>
-                <button
-                  className="note-item"
-                  onClick={() =>
-                    setEditing({ note, isNew: false, start: note.start, end: note.end })
-                  }
-                >
-                  <span className="note-time">
-                    {minuteLabel(note.start)}–{minuteLabel(note.end)}
-                  </span>
-                  {c && (
-                    <span className="note-change">
-                      {c.before}→{c.after}{" "}
-                      <strong>{c.diff > 0 ? `+${c.diff}` : c.diff}</strong>
-                    </span>
-                  )}
-                  {note.body && <span className="note-body">{note.body}</span>}
-                  {note.tags.length > 0 && (
-                    <span className="note-tags">{note.tags.map((t) => `#${t}`).join(" ")}</span>
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        {editing?.isNew ? (
-          <NoteForm
-            key={editing.note.id}
-            initial={editing.note}
-            isNew
-            suggestions={knownTags()}
-            onRangeChange={(start, end) => setEditing({ ...editing, start, end })}
-            onSave={(n) => persist(upsertNote(notes, n))}
-            onDelete={() => setEditing(null)}
-            onCancel={() => setEditing(null)}
-          />
-        ) : (
-          !editing && (
-            <button className="add-note" onClick={startNew}>
-              ＋ メモを追加
-            </button>
-          )
-        )}
-      </section>
+      <NotesSection
+        notes={notes}
+        points={points}
+        editing={editor?.type === "note" ? editor : null}
+        canAdd={editor === null}
+        onAdd={() =>
+          open({
+            type: "note",
+            note: { id: newId(), body: "", tags: [], ...defaultRange(isToday) },
+            isNew: true,
+          })
+        }
+        onEdit={(note) => open({ type: "note", note, isNew: false })}
+        onRangeChange={updateRange}
+        onSave={(n) => commitNotes(upsertNote(notes, n))}
+        onDelete={(id) => {
+          if (confirm("このメモを削除しますか？")) commitNotes(notes.filter((n) => n.id !== id));
+        }}
+        onCancel={close}
+      />
+
+      <PlacesSection
+        blocks={blocks}
+        editing={editor?.type === "place" ? editor : null}
+        canAdd={editor === null}
+        onAdd={() =>
+          open({
+            type: "place",
+            block: { place: "", ...newPlaceRange(isToday, places) },
+            isNew: true,
+          })
+        }
+        onEdit={(block) => open({ type: "place", block, isNew: false })}
+        onRangeChange={updateRange}
+        onSave={(b) => {
+          const old = editor?.type === "place" && !editor.isNew ? editor.block : null;
+          const cleared = old ? paintPlaces(places, old.start, old.end, null) : places;
+          commitPlaces(paintPlaces(cleared, b.start, b.end, b.place));
+        }}
+        onDelete={(b) => {
+          if (confirm(`${minuteLabel(b.start)}〜の「${b.place}」を削除しますか？`)) {
+            commitPlaces(paintPlaces(places, b.start, b.end, null));
+          }
+        }}
+        onCancel={close}
+      />
+
+      <CaffeineSection
+        items={caffeine}
+        editing={editor?.type === "caffeine" ? editor : null}
+        canAdd={editor === null}
+        onAdd={() =>
+          open({
+            type: "caffeine",
+            item: { id: newId(), at: newCaffeineTime(isToday), label: "" },
+            isNew: true,
+          })
+        }
+        onEdit={(item) => open({ type: "caffeine", item, isNew: false })}
+        onTimeChange={(at) => setPreview({ kind: "point", at })}
+        onSave={(c) => commitCaffeine(upsertCaffeine(caffeine, c))}
+        onDelete={(id) => {
+          if (confirm("この記録を削除しますか？")) {
+            commitCaffeine(caffeine.filter((c) => c.id !== id));
+          }
+        }}
+        onCancel={close}
+      />
 
       <button className="clear" onClick={clear} disabled={average === null}>
         この日の曲線を消す

@@ -1,11 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { DAY_END_MIN, DAY_START_MIN, SLOT_MINUTES, minuteLabel } from "@/lib/day";
+import { TimeRangeFields } from "@/components/TimeFields";
 import { normalizeTag, type Note } from "@/lib/notes";
-
-const TIME_OPTIONS: number[] = [];
-for (let m = DAY_START_MIN; m <= DAY_END_MIN; m += SLOT_MINUTES) TIME_OPTIONS.push(m);
 
 const TAG_SEPARATOR = /[,、\s　]+/;
 
@@ -34,7 +31,7 @@ export default function NoteForm({
   const [tags, setTags] = useState(initial.tags);
   const [tagInput, setTagInput] = useState("");
 
-  const rangeError = end <= start ? "終わりは始まりより後にしてください" : null;
+  const rangeError = end <= start;
   const empty = body.trim() === "" && tags.length === 0 && normalizeTag(tagInput) === "";
 
   function changeRange(nextStart: number, nextEnd: number) {
@@ -80,33 +77,8 @@ export default function NoteForm({
   const unused = suggestions.filter((t) => !tags.includes(t)).slice(0, 12);
 
   return (
-    <form className="note-form" onSubmit={submit}>
-      <div className="note-form-range">
-        <select
-          aria-label="始まり"
-          value={start}
-          onChange={(e) => changeRange(Number(e.target.value), end)}
-        >
-          {TIME_OPTIONS.slice(0, -1).map((m) => (
-            <option key={m} value={m}>
-              {minuteLabel(m)}
-            </option>
-          ))}
-        </select>
-        <span>〜</span>
-        <select
-          aria-label="終わり"
-          value={end}
-          onChange={(e) => changeRange(start, Number(e.target.value))}
-        >
-          {TIME_OPTIONS.slice(1).map((m) => (
-            <option key={m} value={m}>
-              {minuteLabel(m)}
-            </option>
-          ))}
-        </select>
-      </div>
-      {rangeError && <p className="note-form-error">{rangeError}</p>}
+    <form className="form" onSubmit={submit}>
+      <TimeRangeFields start={start} end={end} onChange={changeRange} />
 
       <textarea
         aria-label="何をしたか"
@@ -146,8 +118,8 @@ export default function NoteForm({
         </div>
       )}
 
-      <div className="note-form-actions">
-        <button type="submit" className="primary" disabled={!!rangeError || empty}>
+      <div className="form-actions">
+        <button type="submit" className="primary" disabled={rangeError || empty}>
           保存
         </button>
         <button type="button" onClick={onCancel}>

@@ -183,51 +183,91 @@ button:disabled {
   font-size: 14px;
 }
 
-.band-fill {
-  fill: #f3f3f3;
+.readout-place {
+  font-size: 14px;
+  padding: 1px 6px;
+  border: 1px solid var(--fg);
 }
 
-.band-mark {
-  fill: #999;
+.place-label {
+  fill: #555;
+  font-size: 12px;
 }
 
-.band-active .band-fill {
-  fill: #e6e6e6;
+.note-mark {
+  fill: #888;
 }
 
-.band-active .band-mark {
+.caffeine line {
+  stroke: var(--fg);
+  stroke-width: 1.5;
+}
+
+.caffeine circle {
   fill: var(--fg);
 }
 
-.notes {
-  margin-top: 24px;
-  border-top: 1px solid var(--fg);
-  padding-top: 12px;
+.caffeine text {
+  fill: var(--bg);
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
 }
 
-.notes-title {
-  margin: 0 0 8px;
+.preview-range {
+  fill: rgba(0, 0, 0, 0.06);
+  stroke: var(--fg);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.preview-point {
+  stroke: var(--fg);
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+
+.section {
+  margin-top: 24px;
+  border-top: 1px solid var(--fg);
+  padding-top: 8px;
+}
+
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-head h2 {
+  margin: 0;
   font-size: 15px;
   font-weight: 600;
 }
 
-.notes-empty {
+.section-add {
+  padding: 6px 12px;
+  font-size: 14px;
+}
+
+.section-empty {
   margin: 8px 0;
   color: var(--muted);
   font-size: 14px;
 }
 
-.note-list {
+.item-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-.note-list li + li {
+.item-list li + li {
   border-top: 1px solid var(--line);
 }
 
-.note-item {
+.item {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
@@ -238,38 +278,35 @@ button:disabled {
   text-align: left;
 }
 
-.note-time,
-.note-change {
+.item:disabled {
+  color: inherit;
+}
+
+.item-time,
+.item-sub {
   font-variant-numeric: tabular-nums;
   font-size: 14px;
 }
 
-.note-change {
+.item-sub {
   color: var(--muted);
 }
 
-.note-change strong {
+.item-sub strong {
   color: var(--fg);
 }
 
-.note-body {
+.item-body {
   flex-basis: 100%;
 }
 
-.note-tags {
+.item-tags {
   flex-basis: 100%;
   color: var(--muted);
   font-size: 14px;
 }
 
-.add-note {
-  width: 100%;
-  margin-top: 8px;
-  padding: 12px;
-  border-style: dashed;
-}
-
-.note-form {
+.form {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -278,14 +315,15 @@ button:disabled {
   border: 1px solid var(--fg);
 }
 
-.note-form-range {
+.form-range {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.note-form select,
-.note-form textarea,
+.form select,
+.form textarea,
+.text-input,
 .tag-field {
   font: inherit;
   font-size: 16px;
@@ -295,17 +333,26 @@ button:disabled {
   border-radius: 0;
 }
 
-.note-form select {
+.form select {
   padding: 8px;
   font-variant-numeric: tabular-nums;
 }
 
-.note-form textarea {
+.form textarea,
+.text-input {
   padding: 8px;
+}
+
+.form textarea {
   resize: vertical;
 }
 
-.note-form-error {
+.form-range .text-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.form-error {
   margin: 0;
   font-size: 13px;
 }
@@ -327,7 +374,8 @@ button:disabled {
   outline: none;
 }
 
-.tag-suggestions {
+.tag-suggestions,
+.choice-row {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -339,31 +387,53 @@ button:disabled {
   border-color: var(--line-strong);
 }
 
+.choice-row .tag {
+  padding: 8px 14px;
+  font-size: 15px;
+}
+
 .tag-on {
   background: var(--fg);
   color: var(--bg);
   border-color: var(--fg);
 }
 
-.note-form-actions {
+.form-actions {
   display: flex;
   gap: 8px;
 }
 
-.note-form-actions button {
+.form-actions button {
   padding: 8px 16px;
 }
 
-.note-form-actions .primary {
+.form-actions .primary {
   background: var(--fg);
   color: var(--bg);
 }
 
-.note-form-actions .primary:disabled {
+.form-actions .primary:disabled {
   background: var(--line);
   color: var(--line-strong);
 }
 
-.note-form-actions .danger {
+.form-actions .danger {
   margin-left: auto;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  color: #444;
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
